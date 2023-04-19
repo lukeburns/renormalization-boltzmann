@@ -1,0 +1,135 @@
+\documentclass{article}
+
+\usepackage[margin=1.25in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{mathrsfs}
+\usepackage{float}
+\usepackage{minted}
+\usepackage{mathtools}
+\usepackage{url}
+\usepackage{amsthm}
+\usepackage{tabularx}
+
+\newcolumntype{Y}{>{\centering\arraybackslash}X}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{corollary}{Corollary}[theorem]
+\newtheorem{lemma}[theorem]{Lemma}
+
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
+
+\title{Renormalization and Boltzmann Machines}
+\author{Lucas Burns}
+\date{Dec 20, 2021}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+    We argue that the previously proposed correspondence between restricted Boltzmann machines (RBMs) and variational renormalization group (RG) methods \cite{mehta_exact_2014} is almost but not quite exact.
+\end{abstract}
+
+The Boltzmann distribution arises in various fields of physics, statistics, and machine learning. The distribution is given by the exponential of energies
+\begin{align}
+    P(v) = e^{-H(v)}/\sum_{v \in \mathcal V} e^{-H(v)}
+\end{align}
+where $H : \mathcal V \to \mathbb R$ is a Hamiltonian over some configuration space $\mathcal V$.
+
+We define an energy function $E_\lambda : \mathcal V \times \mathcal H \to \mathbb R$ with a vector parameters $\lambda$, a Hamiltonian
+\begin{align}
+    H_\lambda(v) &= - \log \sum_{h \in \mathcal H} E_\lambda(v,h),
+\end{align}
+and an associated Boltzmann distribution
+\begin{align}
+    P_\lambda(v) &= e^{-H_\lambda(v)}/\sum_{v \in \mathcal V} e^{-H_\lambda(v)}.
+\end{align}
+
+Additionally, we have the free energy
+\begin{align}
+    F &= -\log \sum_{v \in \mathcal V} e^{-H(v)}
+\end{align}
+with $F_\lambda$ defined analogously for $H_\lambda$.
+
+\cite{mehta_exact_2014} shows an almost exact correspondence between these quantities used in restricted Boltzmann machines in machine learning and in variational renormalization methods applied to physics problems, such as the Ising model \cite{wilson_renormalization_1974, kadanoff_statistical_2000}. However, \cite{mehta_exact_2014} does not discuss the relationship between the associated optimization problems in much depth. 
+
+Here we show that there is an important difference between the two variational problems in machine learning and physics, summarized in the table below, that complexifies the proposed correspondence.
+
+\begin{table}[H]
+\begin{center}
+\def\arraystretch{2.5}
+\setlength\tabcolsep{8pt}
+\footnotesize
+\begin{tabularx}{\textwidth}{@{} | Y | c | c | @{}}
+\hline
+ & \shortstack{Restricted Boltzmann Machine (RBM)} &  \shortstack{Variational Renormalization (RG)} \\\hline
+ 
+ Optimization problem & 
+    \shortstack{$\min_{\lambda} \sum_{v \in \mathcal V} P(v) \log\bigg(\frac{P(v)}{P_\lambda(v)}\bigg)$} &
+        \shortstack{$\min_{\lambda} |F - F_\lambda|$} \\\hline
+ First order condition & 
+    $\langle \nabla_\lambda H_\lambda \rangle_{P_\lambda} = \langle \nabla_\lambda H_\lambda \rangle_{P}$ & 
+        $\langle \nabla_\lambda H_\lambda \rangle_{P_\lambda} = 0$ \\\hline
+\end{tabularx}
+\end{center}
+where $\langle H \rangle_P = \sum_{v \in \mathcal V} H(v) P(v)$ is the expectation value of $H$ with respect to the probability distribution $P$, and $\nabla_\lambda$ is the gradient with respect to a vector $\lambda$ of parameters (weights).
+\end{table}
+
+The difference in first order extremization conditions for the two optimization problems tells us that these are inequivalent variational methods. Specifically, minimizing the difference in free energy is a special case of minimizing the Kullback-Leibler divergence, when $\langle \nabla_\lambda H_\lambda \rangle_P$ is constrained to $0$. 
+
+That is, the correspondence isn't quite exact since the $\lambda_\text{RBM}$ which minimizes the Kullback-Leibler divergence $D_\text{KL}(P || P_\lambda)$ is generally different from $\lambda_\text{RG}$ which minimizes the free energy difference $|F - F_\lambda|$.
+
+In particular, Boltzmann optimization allows for the loss of arbitrary amounts of free energy between the true and coarse grained systems. Since minimization of free energy plays an important role in renormalization, it is unclear whether the conclusions in \cite{mehta_exact_2014} that deep neural networks implement renormalization still holds in general. That said, it's possible Boltzmann machines may simply allow for extractions of a subset of coarse grained features, allowing the loss of free energy that does not contribute significantly to probabilities for some reason. Further analysis is required.
+
+Despite this, the difference between the optimization problems suggests a novel training method for restricted Boltzmann machine that minimizes the energy difference, $|F - F_\lambda|$ rather than the Kullback-Leibler divergence / maximum likelihood. We will leave this to future work.
+
+\section*{Derivations}
+
+At a local or global minimum $\lambda^*$ for a function $f$, we must have $|\nabla_\lambda f(\lambda^*) = 0|$. There are additional second order conditions that determine whether it is a minimum, and whether it is a local or global minimum, but since we simply aim to show that RBMs and RG methods are distinct optimization problems, it suffices to show that the first order extremization conditions differ.
+
+We will use the following computations.
+
+\begin{align}\label{eq:df}
+    \nabla_\lambda F_\lambda &= - \nabla_\lambda \log \sum_{v \in \mathcal V} e^{-H_\lambda(v)} \\
+    &= \sum_{v \in \mathcal V} \nabla_\lambda H_\lambda(v) P_\lambda(v) \\
+    &= \langle \nabla_\lambda H_\lambda \rangle_{P_\lambda}
+\end{align}
+
+\begin{align}
+    \nabla_\lambda P_\lambda(v) &= \nabla_\lambda e^{-H_\lambda(v)} / e^{-F_\lambda} + \nabla_\lambda e^{F_\lambda} e^{-H_\lambda(v)} \\
+    &= -(\nabla_\lambda H_\lambda(v) - \nabla_\lambda F_\lambda) P_\lambda(v)
+\end{align}
+using $P_\lambda(v) = e^{-H_\lambda(v)}/e^{-F_\lambda}$.
+
+\subsection*{Restricted Boltzmann Machines}
+
+The first order condition for RBMs is given by
+\begin{align}
+    \nabla_\lambda D_\text{KL}(P || P_\lambda) &= \nabla_\lambda \sum_{v \in \mathcal V} P(v) \bigg( \log\big(P(v)\big) - \log\big( P_\lambda(v) \big)\bigg) \\
+    &= - \sum_{v \in \mathcal V} P(v) \nabla_\lambda \log\big( P_\lambda(v) \big) \\
+    &= - \sum_{v \in \mathcal V} P(v) \nabla_\lambda P_\lambda / P_\lambda(v) \\ 
+    &= \sum_{v \in \mathcal V} P(v) (\nabla_\lambda H_\lambda(v) - \nabla_\lambda F_\lambda) \\
+    &= \langle \nabla_\lambda H_\lambda \rangle_P - \langle \nabla_\lambda H_\lambda \rangle_{P_\lambda} = 0
+\end{align}
+
+\subsection*{Variational Renormalization}
+
+The first order extremization condition for variational RG is given by
+\begin{align}
+    \nabla_\lambda (F - F_\lambda)^2 &= -2 \nabla_\lambda F_\lambda (F - F_\lambda) = 0
+\end{align}
+which for inexact transformations $F \not= F_\lambda$, requires a $\lambda$ which satisfies
+\begin{align}
+    \nabla_\lambda F_\lambda &= \langle \nabla_\lambda H_\lambda \rangle_{P_\lambda} = 0.
+\end{align}
+
+\medskip
+
+\bibliographystyle{unsrt}
+\bibliography{refs}
+
+\end{document}
